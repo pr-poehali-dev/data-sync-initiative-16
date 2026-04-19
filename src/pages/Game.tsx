@@ -249,7 +249,17 @@ const DIFFICULTIES: Record<Difficulty, DiffConfig> = {
   night:     { label: "Ночь",       emoji: "🌙", desc: "Все спят... или делают вид. Фонарик не врёт.", color: "text-purple-400", checkInterval: 120, activityInterval: 40, urgentThreshold: 20, extraRule: "🌙 Ночью каждый звук слышен вдвойне." },
 };
 
-type GameState = "menu" | "playing" | "punishment" | "won" | "check";
+// ─── ПРАВИЛА ──────────────────────────────────────────────────────────────────
+const RULES = [
+  { icon: "🚫", text: "Нельзя использовать читы", penalty: "Дисквалификация — игра начинается заново" },
+  { icon: "🚫", text: "Нельзя прыгать", penalty: "Стив услышит удар — мгновенная проверка" },
+  { icon: "🚫", text: "Нельзя бегать", penalty: "Топот ног разбудит жену — мгновенная проверка" },
+  { icon: "✅", text: "Двигайся только медленно и тихо", penalty: null },
+  { icon: "✅", text: "Выполняй квесты по порядку", penalty: null },
+  { icon: "✅", text: "Прячься при каждой проверке", penalty: null },
+];
+
+type GameState = "menu" | "rules" | "playing" | "punishment" | "won" | "check" | "cheat" | "jump" | "run";
 
 function formatTime(s: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
@@ -268,6 +278,7 @@ function pickEnding(diff: Difficulty, caughtCount: number, elapsed: number, chec
 
 export default function Game() {
   const [screen, setScreen] = useState<GameState>("menu");
+  const [pendingDifficulty, setPendingDifficulty] = useState<Difficulty>("normal");
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [currentQuest, setCurrentQuest] = useState(0);
   const [checkTimer, setCheckTimer] = useState(600);
@@ -372,6 +383,27 @@ export default function Game() {
     setScreen("playing");
   };
 
+  const openRules = (d: Difficulty) => {
+    setPendingDifficulty(d);
+    setScreen("rules");
+  };
+
+  // Нарушение: прыжок / бег → мгновенная проверка-штраф
+  const violateRule = (type: "jump" | "run") => {
+    setScreen(type);
+    setTimeout(() => {
+      triggerCheck();
+    }, 2500);
+  };
+
+  // Чит → немедленный рестарт
+  const useCheat = () => {
+    setScreen("cheat");
+    setTimeout(() => {
+      startGame(difficulty);
+    }, 3000);
+  };
+
   const quest = QUESTS[currentQuest];
   const isUrgent = checkTimer <= cfg.urgentThreshold;
 
@@ -407,7 +439,7 @@ export default function Game() {
               {(Object.keys(DIFFICULTIES) as Difficulty[]).map(key => {
                 const d = DIFFICULTIES[key];
                 return (
-                  <button key={key} onClick={() => startGame(key)}
+                  <button key={key} onClick={() => openRules(key)}
                     className="bg-gray-900 border border-gray-800 hover:border-gray-600 rounded-lg px-5 py-4 text-left transition-all hover:bg-gray-800">
                     <div className="flex items-center gap-3 mb-1">
                       <span className="text-2xl">{d.emoji}</span>
@@ -421,6 +453,73 @@ export default function Game() {
             </div>
 
             <p className="text-gray-700 text-xs mt-6">8 концовок · 3 персонажа · наказания</p>
+          </motion.div>
+        )}
+
+        {/* ── ПРАВИЛА ── */}
+        {screen === "rules" && (
+          <motion.div key="rules" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center max-w-lg mx-auto w-full pt-12">
+            <div className="text-5xl mb-3">📋</div>
+            <h2 className="text-2xl font-bold mb-1">Правила игры</h2>
+            <p className="text-gray-500 text-sm mb-6">Нарушение правил — немедленное наказание</p>
+            <div className="w-full space-y-3 mb-8">
+              {RULES.map((r, i) => (
+                <div key={i} className={`flex items-start gap-3 px-4 py-3 rounded-lg border ${r.penalty ? "border-red-900/50 bg-red-950/20" : "border-green-900/50 bg-green-950/20"}`}>
+                  <span className="text-xl mt-0.5">{r.icon}</span>
+                  <div>
+                    <p className={`font-bold text-sm ${r.penalty ? "text-red-300" : "text-green-300"}`}>{r.text}</p>
+                    {r.penalty && <p className="text-xs text-gray-500 mt-0.5">Штраф: {r.penalty}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setScreen("menu")}
+                className="bg-gray-800 text-white font-bold px-6 py-3 uppercase tracking-wide hover:bg-gray-700 transition-colors">
+                Назад
+              </button>
+              <button onClick={() => startGame(pendingDifficulty)}
+                className="bg-yellow-400 text-black font-bold px-8 py-3 uppercase tracking-wide hover:bg-yellow-300 transition-colors">
+                Понял, начинаем!
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── НАРУШЕНИЕ: ПРЫЖОК ── */}
+        {screen === "jump" && (
+          <motion.div key="jump" initial={{ y: -40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center text-center max-w-md mx-auto">
+            <div className="text-8xl mb-5 animate-bounce">🦘</div>
+            <h1 className="text-3xl font-bold text-orange-400 mb-3">ТЫ ПРЫГНУЛ!</h1>
+            <p className="text-gray-300 mb-2">Стив услышал удар об пол.</p>
+            <p className="text-red-400 font-bold text-sm mb-6">🚫 Правило нарушено: нельзя прыгать!</p>
+            <p className="text-gray-500 text-sm">Идёт проверка...</p>
+          </motion.div>
+        )}
+
+        {/* ── НАРУШЕНИЕ: БЕГ ── */}
+        {screen === "run" && (
+          <motion.div key="run" initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center text-center max-w-md mx-auto">
+            <div className="text-8xl mb-5">🏃💨</div>
+            <h1 className="text-3xl font-bold text-orange-400 mb-3">ТЫ ПОБЕЖАЛ!</h1>
+            <p className="text-gray-300 mb-2">Жена Стива услышала топот и встала.</p>
+            <p className="text-red-400 font-bold text-sm mb-6">🚫 Правило нарушено: нельзя бегать!</p>
+            <p className="text-gray-500 text-sm">Идёт проверка...</p>
+          </motion.div>
+        )}
+
+        {/* ── НАРУШЕНИЕ: ЧИТ ── */}
+        {screen === "cheat" && (
+          <motion.div key="cheat" initial={{ scale: 1.1, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center text-center max-w-md mx-auto">
+            <div className="text-8xl mb-5">💻</div>
+            <h1 className="text-3xl font-bold text-red-400 mb-3">ЧИТ ОБНАРУЖЕН!</h1>
+            <p className="text-gray-300 mb-2">Стив и жена всё видели. Ты дисквалифицирован.</p>
+            <p className="text-red-400 font-bold text-sm mb-6">🚫 Правило нарушено: читы запрещены!</p>
+            <p className="text-gray-500 text-sm">Игра начинается заново...</p>
           </motion.div>
         )}
 
@@ -583,13 +682,32 @@ export default function Game() {
             </AnimatePresence>
 
             {/* Прогресс квестов */}
-            <div className="grid grid-cols-8 gap-1 mt-8 mb-2">
+            <div className="grid grid-cols-8 gap-1 mt-8 mb-4">
               {QUESTS.map((q, i) => (
                 <div key={q.id} className={`text-xl text-center py-1 rounded transition-all duration-300 ${
                   i < currentQuest ? "opacity-100" : i === currentQuest ? "opacity-100 scale-110" : "opacity-20"}`}>
                   {i < currentQuest ? "✅" : q.item}
                 </div>
               ))}
+            </div>
+
+            {/* Запрещённые действия */}
+            <div className="border-t border-gray-800 pt-4 pb-2">
+              <p className="text-xs text-gray-700 uppercase tracking-wider mb-3 text-center">Запрещённые действия</p>
+              <div className="flex gap-2 justify-center">
+                <button onClick={() => violateRule("jump")}
+                  className="flex items-center gap-1 bg-gray-900 border border-red-900/40 text-red-400 text-xs px-3 py-2 rounded hover:bg-red-950/30 transition-colors">
+                  🦘 Прыгнуть
+                </button>
+                <button onClick={() => violateRule("run")}
+                  className="flex items-center gap-1 bg-gray-900 border border-red-900/40 text-red-400 text-xs px-3 py-2 rounded hover:bg-red-950/30 transition-colors">
+                  🏃 Побежать
+                </button>
+                <button onClick={useCheat}
+                  className="flex items-center gap-1 bg-gray-900 border border-red-900/40 text-red-400 text-xs px-3 py-2 rounded hover:bg-red-950/30 transition-colors">
+                  💻 Читить
+                </button>
+              </div>
             </div>
 
           </motion.div>
