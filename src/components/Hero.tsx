@@ -25,13 +25,17 @@ export default function Hero() {
         />
       </motion.div>
 
-      <div className="relative z-10 text-center text-white">
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
-          ОТКРОЙ
+      <div className="relative z-10 text-center text-white px-4">
+        <p className="text-yellow-400 uppercase tracking-widest text-sm mb-4 opacity-90">⚠️ Мама и папа не спят</p>
+        <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 drop-shadow-2xl">
+          СБЕГИ!
         </h1>
         <p className="text-lg md:text-xl max-w-2xl mx-auto px-6 opacity-90">
-          Исследуй границы дизайна с иммерсивным параллакс-эффектом
+          Помоги сыну Стива выбраться на улицу — пройди квесты, обмани родителей и не попадись на проверке
         </p>
+        <button className="mt-8 bg-yellow-400 text-black font-bold px-8 py-3 uppercase tracking-wide hover:bg-yellow-300 transition-colors duration-300">
+          Начать побег
+        </button>
       </div>
     </div>
   );
