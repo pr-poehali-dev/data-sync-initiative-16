@@ -33,9 +33,12 @@ export default function Hero() {
         <p className="text-lg md:text-xl max-w-2xl mx-auto px-6 opacity-90">
           Помоги сыну Стива выбраться на улицу — пройди квесты, обмани родителей и не попадись на проверке
         </p>
-        <button className="mt-8 bg-yellow-400 text-black font-bold px-8 py-3 uppercase tracking-wide hover:bg-yellow-300 transition-colors duration-300">
+        <a
+          href="/game"
+          className="mt-8 inline-block bg-yellow-400 text-black font-bold px-8 py-3 uppercase tracking-wide hover:bg-yellow-300 transition-colors duration-300"
+        >
           Начать побег
-        </button>
+        </a>
       </div>
     </div>
   );
